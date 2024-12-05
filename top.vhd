@@ -45,15 +45,15 @@ signal trig : STD_LOGIC := '0';
 signal output : STD_LOGIC := '0';
 signal Enable : STD_LOGIC := '0';
 signal Clock : STD_LOGIC := '1';
-signal data : STD_LOGIC_VECTOR(11 downto 0) := (others => '0');
-signal bcd0, bcd1, bcd2, bcd3 : std_logic_vector(3 downto 0) := (others => '0');
-signal BCDin : STD_LOGIC_VECTOR (3 downto 0) := (others => '0');
+signal data : STD_LOGIC_VECTOR(11 downto 0) := (others => '0');                         --12-bit vector signal for ADC data.
+signal bcd0, bcd1, bcd2, bcd3 : std_logic_vector(3 downto 0) := (others => '0');       -- 4-bit vector signals for BCD representation of the data.
+signal BCDin : STD_LOGIC_VECTOR (3 downto 0) := (others => '0');                       --7-bit vector signal for driving the 7-segment display.
 signal Seven_Segment : STD_LOGIC_VECTOR (6 downto 0) := (others => '0');
 signal licz : std_logic := '0';
 signal licznik : integer := 0;
 signal licznik2 : integer := 0;
 begin
-debouncer_com : debouncer port map (Clock100MHz => Clock100MHz,
+debouncer_com : debouncer port map (Clock100MHz => Clock100MHz,                        --This section of the VHDL code instantiates and connects the components within the top.vhd architecture:
                                     trig => trig,
                                     output => output);
 adc_com : adc port map (    ADC_CLK => ADC_CLK,
@@ -70,9 +70,9 @@ binary_bcd_comp : binary_to_bcd port map (  Clock => Clock,
                                             bcd3 => bcd3);
 bcd_7segment_comp : bcd_to_7segment port map (  BCDin => BCDin,
                                                 Seven_Segment => Seven_Segment);
-trig <= Button3;
-Enable <= output;
-Segment_A <= Seven_Segment(6);
+trig <= Button3;   --trig is assigned the value of Button3 (button input).
+Enable <= output;  --Enable is assigned the value of output from the debouncer.
+Segment_A <= Seven_Segment(6);  --The segments of the 7-segment display (Segment_A to Segment_G) are assigned the corresponding bits from the Seven_Segment signal.
 Segment_B <= Seven_Segment(5);
 Segment_C <= Seven_Segment(4);
 Segment_D <= Seven_Segment(3);
@@ -83,18 +83,18 @@ Segment_G <= Seven_Segment(0);
 process(Clock100MHz)
 begin
     if (Clock100MHz'event and Clock100MHz = '1') then
-        if (licznik = 1000) then
+        if (licznik = 1000) then      --zlicza do 1000
             Clock <= not Clock;
-            licznik <= 0;
+            licznik <= 0;  -- jak zliczy to sie zeruje
         else
-            licznik <= licznik + 1;
+            licznik <= licznik + 1;  --jak nnie zliczyl to sie inkementuje o 1
         end if;
     end if;
 end process;
 
 process(Clock, Enable)
 begin
-    if (Clock'event and Clock = '1') then
+    if (Clock'event and Clock = '1') then  --The process is triggered on the rising edge of Clock.
         if (Enable = '1') then
             licz <= '0';
         elsif (licz = '0') then
@@ -118,20 +118,20 @@ begin
     end if;
 end process;
 
-process(Clock, licznik2)
+process(Clock, licznik2)  --The value of licznik2 determines which segments are activated and which BCD digit is displayed.
 begin
-    if (Clock'event and Clock = '1') then
+    if (Clock'event and Clock = '1') then 
         if (licznik2 = 35) then
-            Segment_D1 <= '0';
+            Segment_D1 <= '0';  --At count 35, the first display (Segment_D1) is updated.
             Segment_D2 <= '1';
             Segment_D3 <= '1';
             Segment_D4 <= '1';
             BCDin <= bcd3;
-            Segment_DP <= '0';
+            Segment_DP <= '0';  --In the VHDL code, setting Segment_DP to '0' when licznik2 equals 35 turns on the decimal point for the first digit (Segment_D1). This indicates that the decimal point should be illuminated only when the first digit is active. The value '0' typically means the segment is on, depending on the display's common cathode or anode configuration.
             Segment_Dots <= '1';
         elsif (licznik2 = 45) then
             Segment_D1 <= '1';
-            Segment_D2 <= '0';
+            Segment_D2 <= '0';  --At count 45, the second display (Segment_D2) is updated.
             Segment_D3 <= '1';
             Segment_D4 <= '1';
             BCDin <= bcd2;
@@ -140,7 +140,7 @@ begin
         elsif (licznik2 = 55) then
             Segment_D1 <= '1';
             Segment_D2 <= '1';
-            Segment_D3 <= '0';
+            Segment_D3 <= '0'; --At count 55, the third display (Segment_D3) is updated.
             Segment_D4 <= '1';
             BCDin <= bcd1;
             Segment_DP <= '1';
@@ -149,11 +149,11 @@ begin
             Segment_D1 <= '1';
             Segment_D2 <= '1';
             Segment_D3 <= '1';
-            Segment_D4 <= '0';
+            Segment_D4 <= '0';  --At count 65, the fourth display (Segment_D4) is updated.
             BCDin <= bcd0;
             Segment_DP <= '1';
             Segment_Dots <= '1';
-        elsif (licznik2 = 75) then
+        elsif (licznik2 = 75) then  --At count 75, the display resets, and the cycle restarts.
             Segment_D1 <= '1';
             Segment_D2 <= '1';
             Segment_D3 <= '1';
