@@ -14,11 +14,33 @@ architecture Behavioral of adc is
     type stany is (idle, start, send, finished);
     signal stan, stan_nast : stany := idle;
     signal licznik : integer := 0;
-    signal bufor : STD_LOGIC_VECTOR(11 downto 0) := (others => '0');
+    signal bufor : STD_LOGIC_VECTOR(11 downto 0) := (others => '0');  --Buffer for storing ADC data.
     signal data_int : STD_LOGIC_VECTOR(11 downto 0) := (others => '0');
 begin
+        
+process(stan, Clock)
+begin
+    case stan is
+        when idle =>  --ADC is not active
+            ADC_CLK <= '0';
+            ADC_CS <= '1';
+        when start =>  --ADC is starting
+            ADC_CLK <= Clock;
+            ADC_CS <= '0';
+        when send =>  -- data is being sent from the ADC.
+            ADC_CLK <= Clock;
+            ADC_CS <= '0';
+        when finished => --ADC operation is complete.
+            ADC_CLK <= '0';
+            ADC_CS <= '1';
+        when others =>
+            ADC_CLK <= '0';
+            ADC_CS <= '1';
+    end case;
+end process;
+            
 
-process(Clock)
+process(Clock)  --This process updates the state of the stan signal to the next state stan_nast on the rising edge of the Clock.
 begin
     if (Clock'event and Clock = '1') then
         stan <= stan_nast;
@@ -34,7 +56,7 @@ begin
             else
                 licznik <= licznik + 1;
             end if;
-        elsif (stan = send) then
+        elsif (stan = send) then  
             if (licznik = 10) then
                 licznik <= 0;
             else
@@ -44,36 +66,15 @@ begin
     end if;
 end process;
 
-process(stan, Clock)
-begin
-    case stan is
-        when idle =>
-            ADC_CLK <= '0';
-            ADC_CS <= '1';
-        when start =>
-            ADC_CLK <= Clock;
-            ADC_CS <= '0';
-        when send =>
-            ADC_CLK <= Clock;
-            ADC_CS <= '0';
-        when finished =>
-            ADC_CLK <= '0';
-            ADC_CS <= '1';
-        when others =>
-            ADC_CLK <= '0';
-            ADC_CS <= '1';
-    end case;
-end process;
-
 process(Clock, stan)
 begin
     if (Clock'event and Clock = '1') then
-        if (stan = send) then
+        if (stan = send) then  --When stan is send, it shifts in the ADC_DOUT data bit into the bufor register.
             bufor <= bufor(10 downto 0) & ADC_DOUT;
         else
             bufor <= bufor;
         end if;
-        if (stan = finished) then
+        if (stan = finished) then  --When stan is finished, it transfers the content of bufor to data_int.
             data_int <= bufor;
         else
             data_int <= data_int;
@@ -81,9 +82,9 @@ begin
     end if;
 end process;
 
-data <= data_int;
+data <= data_int;  --The data_int is then assigned to the output port data.
     
-process(stan, Enable, licznik)
+process(stan, Enable, licznik)  --state transitions for the ADC
 begin
     stan_nast <= stan;
     case stan is
